@@ -48,5 +48,5 @@ The input data is a text file with several columns separated by the special char
 
 4) OUTPUT FILES
 
-The R script will output the 10 results (for the 10-fold cross validation) in the directory "result". The algorithms compute the metrics: RECALL, PRECISION, F1, FALLOUT, and MAP.
+The R script will output the 10 results (for the 10-fold cross validation) in the directory "result" (Please, create the directory "result", if it does not exist). The algorithms compute the metrics: RECALL, PRECISION, F1, FALLOUT, and MAP.
 
