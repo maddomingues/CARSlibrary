@@ -1,0 +1,52 @@
+Library with Context-Aware Recommender Systems for Top-N Recommendations
+
+
+1) DESCRIPTION
+
+The five recommendation algorithms were implemented by using the language R. So, before running the algorithms please install the R environment. Additionally, install the doParallel package to run the experiments in parallel.
+
+Scripts:
+ibcf.R - Item-Based Collaborative Filtering (IBCF) Algorithm
+cReduction.R - Combined Reduction Based Algorithm using Item-Based Collaborative Filtering
+daviBEST.R - DaVI-BEST Algorithm using Item-Based Collaborative Filtering
+filterPoF.R - Weight-PoF Algorithm using Item-Based Collaborative Filtering
+weightPoF.R - Weight-PoF Algorithm using Item-Based Collaborative Filtering
+
+
+2) HOW TO USE IT?
+
+In the R environment, you must load the R script using the command: source('algorithm.R'). The algorithm run automatically using as input a data file "dataset2.csv". The standard configuration of the algorithms will run them by using 10-fold cross validation.
+
+
+3) INPUT DATA SET FORMAT
+
+The input data is a text file with several columns separated by the special character " " (space). In the first column we have the user id, in the second one we have the date, in the third column we have the time, the fourth one contains the urls accessed. From the fifth column we have the contextual information. Each column (from the fifth one) represents a specific context. Note that the urls are preceded by "h:" e the contexts by "d:". This tags are necessary for the correct running of the algorithms. In the directory "CARSlibrary" we have an example of input data file ("dataset2.csv").
+
+1 21859 21859 h:2 d:83
+3 317 317 h:4 d:71
+3 742 742 h:5 d:3
+4 41 41 h:7 d:70
+5 1337 1337 h:8 d:48
+5 1630 1630 h:9 d:70
+6 2825 2825 h:10 d:33
+7 3758 3758 h:15 d:3
+8 3820 3820 h:17 d:40
+8 3843 3843 h:19 d:50
+7 4928 4928 h:24 d:46
+12 10106 10106 h:29 d:47
+13 10230 10230 h:15 d:3
+12 10237 10237 h:31 d:80
+12 10237 10237 h:31 d:81
+15 12807 12807 h:36 d:79
+18 30530 30530 h:40 d:79
+18 30831 30831 h:42 d:46
+17 32059 32059 h:45 d:45
+20 34153 34153 h:46 d:43
+21 60417 60417 h:48 d:94
+22 60843 60843 h:50 d:9
+
+
+4) OUTPUT FILES
+
+The R script will output the 10 results (for the 10-fold cross validation) in the directory "result". The algorithms compute the metrics: RECALL, PRECISION, F1, FALLOUT, and MAP.
+

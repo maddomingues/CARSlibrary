@@ -1,0 +1,442 @@
+#########################################################################
+#
+# Weight-PoF Algorithm using Item-Based Collaborative Filtering
+#
+# Author: Marcos A. Domingues
+# Date: April, 2013
+#
+#########################################################################
+
+###################################################
+# Before running these algorithms, please, install the doParallel package
+# install.package('doParallel')
+###################################################
+
+library(doParallel)
+# registerDoParallel(cores=detectCores())
+registerDoParallel(cores=10) # Setup number of cores to be used by the cars algorithms
+
+model.name <<- 'tmp_weightPoF.txt'
+
+# Weight PoF algorithm for 10-fold cross validation in parallel
+weightPoF.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
+	dataset.context <<- weightPoF.process.context( read.csv('dataset2.csv', header = TRUE, sep = " ") )
+
+	foreach(i=1:10) %dopar% {
+		model.name <<- paste('tmp_weightPoF_', i, '.txt', sep='')
+		resultFile <- paste('result_pof_', i, '.txt', sep='')
+		weightPoF.run.exp.cf(dataFile,resultFile,neigh,i)
+		folder.name <- paste('pof', i, sep='')
+		dir.create(paste('result/',folder.name,sep=''))
+		file.rename(resultFile,paste('result/',folder.name,'/result_4.csv',sep=''))
+	}
+}
+
+# Run the Weight PoF algorithm using 10-fold cross validation
+weightPoF.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_pof_4.csv', neigh=4){
+	dataset.context <<- weightPoF.process.context( read.csv('dataset2.csv', header = TRUE, sep = " ") )
+
+	folders <- c(1,2,3,4,5,6,7,8,9,10)
+
+	for(i in folders){
+		weightPoF.run.exp.cf(dataFile,resultFile,neigh,i)
+		folder.name <- paste('pof', i, sep='')
+		dir.create(paste('result/',folder.name,sep=''))
+
+		file.rename(resultFile,paste('result/',folder.name,'/result_4.csv',sep=''))
+	}
+}
+
+
+# Run the Weight PoF algorithm for only one fold
+weightPoF.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neigh=c(4), fold=1){
+#	idneigh <- c(2,3,4)
+	idneigh <- neigh
+	for(i in idneigh){
+		resultFile <- paste(resultFile,'_',i,'.csv',sep='')
+		weightPoF.run.exp.cf(dataFile,resultFile,i,fold)
+	}
+}
+
+# The Weight PoF algorithm - intermediate call
+weightPoF.run.exp.cf <- function(dataFile='dataset2.csv', resultFile='result_4.csv', neigh=4, fold=1) {
+	cat("...Running the experiments...\n")
+	
+	res_pre <- NULL
+	res_pre <- read.csv(dataFile, header = TRUE, sep = " ")
+
+	dimensions.names <<- c(tolower(names(res_pre)),'weightPoF')
+	data <- weightPoF.load.data.and.setup(res_pre, fold)
+
+	result <- NULL
+	result <- weightPoF.cf.exp(Train=unique(data$train[,c(1,4)]),Test=unique(data$test[,c(1,4)]),Test.ids=data$test.ids,Hidden=data$hidden,Table='weightPoF',Field='weightPoF',Ntop=c(1,2,3,5,10),Neib=neigh)
+	write.table(result, file = resultFile, row.names = FALSE, col.names = TRUE, quote = FALSE, sep = ",")
+
+	cat("...Experiments finished...\n")
+	result
+}
+
+# The Weight PoF algorithm
+weightPoF.cf.exp <- function(Train=NULL,Test=NULL,Test.ids=NULL,Hidden=NULL,Table='',Field='',Ntop=c(1),Neib=2){
+	results <- NULL
+	S <- weightPoF.simmatrix(Train)
+	results <- weightPoF.cf.reeval(S,Test,Test.ids,Hidden,Table,Field,Ntop,Neib)
+	results
+}
+
+# Take a test set, a hidden set and a similarity matrix
+# and outputs evaluation statistics for each topN
+weightPoF.cf.reeval <- function(S,Test,Test.Ids,Hid,Table,Field,Ntop,Neib) {
+	results <- NULL
+	Recs<- weightPoF.topNrec.batch(Test,Test.Ids,S,Ntop,Neib)
+	
+	uids <- NULL
+	recs <- NULL
+	for(i in 1:length(Recs)){
+		idx <- Recs[[i]][[1]]
+		items <- (Recs[[i]][[2]])[[1]]
+		recs <- c(recs,items)
+		uids <- c(uids,rep(idx,length(items)))		
+	}
+	RecsTmp <- data.frame(sesId=uids,urlId=recs)
+	res <- weightPoF.rec.eval(RecsTmp,Hid,Test.Ids,S,Test)
+	results <- data.frame(EXP.TABLE=factor(Table, levels=dimensions.names), EXP.FIELD=factor(Field, levels=dimensions.names), N=Ntop[1], HITS=res$hits, N.RECS=res$nrecs, N.HIDDEN=res$nhidden, RECALL=res$recall, PRECISION=res$precision, F1=res$f1, FALLOUT=res$fallout, MAP=res$map)
+	
+	for(j in 2:length(Ntop)){
+		uids <- NULL
+		recs <- NULL
+		for(i in 1:length(Recs)){
+			idx <- Recs[[i]][[1]]
+			items <- (Recs[[i]][[2]])[[j]]
+			recs <- c(recs,items)
+			uids <- c(uids,rep(idx,length(items)))		
+		}
+		RecsTmp <- data.frame(sesId=uids,urlId=recs)
+		res <- weightPoF.rec.eval(RecsTmp,Hid,Test.Ids,S,Test)
+		results <- rbind(results, c(Table,Field,Ntop[j],res$hits,res$nrecs,res$nhidden,res$recall,res$precision,res$f1,res$fallout,res$map))
+	}
+	results
+}
+
+# Gives topN recommendations for each user session
+weightPoF.topNrec.batch <- function(Obs,ObsIds,S,N,Neib) {
+	Usr <- as.vector(ObsIds)
+
+	allTopNrec <- list()
+	idxtopNrec <- 1
+	
+	for(u in Usr) {
+		lrec <- weightPoF.topNrec(u, Obs[Obs[,1]==u,2],S,N,Neib)
+		oneTopNrec <- list(idx=u,recs=lrec)
+		allTopNrec[[idxtopNrec]] <- oneTopNrec
+		idxtopNrec <- idxtopNrec + 1
+	}
+	allTopNrec
+}
+
+# Gives topN recommendations for one user session
+weightPoF.topNrec <- function(User,R,S,N,Neib) {
+	recs <- weightPoF.wsum(User,R,S,Neib)
+
+	max <- length(recs)
+	Nrecs <- list()
+	idxNrecs <- 1
+
+	for(i in N) {
+		if(max==0) {
+			Nrecs[[idxNrecs]] <- c(numeric(0))
+			idxNrecs <- idxNrecs + 1
+		} else {
+			#sort(recs,decreasing=T)[1:min(N,max)]
+			my.x <- recs
+			Nrecs[[idxNrecs]] <- names(recs[sapply(1:(min(i,max)), function(dummy) {my.max <- which.max(my.x); my.x[my.max] <<- -1; my.max})]) 
+			idxNrecs <- idxNrecs + 1
+		}
+	}
+	Nrecs
+}
+
+# Retrieve the score for each candidate recommendation for a user session
+weightPoF.wsum <- function(User,R,S,Neib) {
+	idx <- names(S)
+	sdftemp <- setdiff(idx,R)
+
+	sdf <- sdftemp[grep('^h:', sdftemp)]
+	n <- length(sdf)
+
+	B <- sapply(1:n, function(i){ 
+		weightPoF.wsumitem(R,S,sdf[i],Neib)
+	})
+	names(B) <- sdf
+	B <- weightPoF.post.filtering.weight(User, B)
+	B
+}
+
+# Compute the score for one candidate recommendation
+weightPoF.wsumitem <- function(R,S,i,neighb) {
+	Neighbs <- weightPoF.neighbors(i,S,neighb)
+	
+	N <- intersect(names(Neighbs),R)
+	num <- sum(Neighbs[N])
+	den <- sum(Neighbs)
+
+	if (den==0) 0
+	else num / den
+}
+
+# Find the neighbors
+weightPoF.neighbors <- function(i,S,Neib){
+	neigh <- c(0)
+	names(neigh) <- 'NoNeigh'
+	M1 <- S[[i]]
+
+	if(!is.null(M1)){
+		max <- length(M1)
+		my.xx <- M1
+		neigh <- M1[sapply(1:(min(Neib,max)), function(dummy) {my.max <- which.max(my.xx); my.xx[my.max] <<- -1; my.max})] 
+	}
+	neigh
+}
+
+# Evaluate the recommendations and compute the metrics and statistics
+weightPoF.rec.eval <- function(Recs, Hid, ObsIds, S, Obs){
+	nObs <- length(as.vector(ObsIds))
+	hits <- 0
+	recall.per.user <- NULL
+	precision.per.user <- NULL
+	f1.per.user <- NULL
+	f.per.user <- NULL
+	m.per.user <- NULL
+	
+	candidates <- names(S)
+	candidates <- candidates[grep('^h:', candidates)]
+
+	# Compute metrics for each user
+	for(u in as.vector(unique(Recs[,1]))){
+		hits_tmp <- 0
+		hits_tmp <- weightPoF.hits.per.user(Recs,Hid,u)
+		hits <- hits + hits_tmp
+
+		hid_user <- as.vector(Hid[Hid[,1]==u,2])
+		recs_user <- as.vector(Recs[Recs[,1]==u,2])
+		obs_user <- as.vector(Obs[Obs[,1]==u,2])
+
+		# Compute Recall		
+		r <- 0
+		r <- hits_tmp/length(hid_user)
+		recall.per.user <- c(recall.per.user,r)
+		
+		# Compute Precision
+		p <- 0
+		p <- hits_tmp/length(recs_user)
+		precision.per.user <- c(precision.per.user,p)
+		
+		# Compute F1 metric
+		f1m <- 0
+		if((r != 0) & (p != 0)) {
+			f1m <- ((2*r*p)/(r+p))
+			f1.per.user <- c(f1.per.user,f1m)
+		} else {
+			f1.per.user <- c(f1.per.user,f1m)
+		}
+
+		# Compute Fallout
+		candidates_user <- setdiff(candidates, obs_user)
+		f <- 0
+		f <- ((length(recs_user)) - (hits_tmp)) / (length(setdiff(candidates_user, hid_user)))
+		f.per.user <- c(f.per.user, f)
+
+		# Compute MAP
+		m <- 0
+		if(hits_tmp == 1){
+			m <- hits_tmp / as.numeric(which(recs_user==hid_user))
+		}
+		m.per.user <- c(m.per.user, m)
+	}
+	
+	OUT <- NULL
+	OUT$hits <- hits
+	OUT$nrecs <- nrow(Recs)
+	OUT$nhidden <- nrow(Hid)
+	recall <- sum(recall.per.user)/nObs # Compute average recall
+	OUT$recall <- recall
+	precision <- sum(precision.per.user)/nObs # Compute average precision
+	OUT$precision <- precision
+	f1 <- sum(f1.per.user)/nObs # Compute average F1 metric
+	OUT$f1 <- f1
+	fallout <- sum(f.per.user)/nObs # Compute average fallout
+	OUT$fallout <- fallout
+	map <- sum(m.per.user)/nObs # Compute average map
+	OUT$map <- map
+	OUT
+}
+
+# Compute intersection between recommendation and ground-truth
+weightPoF.hits.per.user <- function(R,H,u) {
+	length(intersect(R[R[,1]==u,2],H[H[,1]==u,2]))
+}
+
+# Prepare data for the experiments
+weightPoF.load.data.and.setup <- function(Dataset, fold) {
+	Dataset[,1] <- as.numeric(Dataset[,1])
+	for(i in 4:ncol(Dataset)){
+		Dataset[,i] <- as.character(Dataset[,i])
+	}
+	weightPoF.data.setup(Dataset, fold)
+}
+
+# Prepare data for the experiments and create the folds
+weightPoF.data.setup <- function(data, fold) {
+	OUT<-NULL
+	
+	data <- data[order(data[,1]),]
+	data.ids <- as.vector(unique(data[,1]))
+	
+	max <- length(data.ids)
+	set.seed(20)
+	sample <- rep(1:10, length=max)[order(runif(max))]
+
+	train.ids <- data.ids[sample != fold]
+	data.train.idx <- NULL
+	for(i in train.ids) { 
+		data.train.idx <- c(data.train.idx,which(data[,1]==i))
+	}
+	data.train <- data[data.train.idx,]
+		
+	test.ids <- data.ids[sample == fold]
+	data.test.all <- NULL
+	data.test.unique <- NULL
+	data.hidd.idx <- NULL
+	data.hidd.item <- NULL
+	for(i in test.ids){
+		data.partition <- data[which(data[,1]==i),]
+		
+		if(nrow(unique(data.partition[,c(1,4)])) > 1){
+			hidsample <- sample(1:nrow(data.partition),1) # random
+			# hidsample <- nrow(data.partition) # last
+			
+			hidd.idx <- data.partition[hidsample,1]
+			hidd.item <- data.partition[hidsample,4]
+			data.hidd.idx <- c(data.hidd.idx,hidd.idx)
+			data.hidd.item <- c(data.hidd.item,hidd.item)
+			data.partition <- data.partition[data.partition[,4]!=hidd.item,]
+			data.test.all <- rbind(data.test.all,data.partition)
+		} else {
+			data.test.unique <- c(data.test.unique,i)	
+		}
+	}
+	test.ids.ok <-setdiff(test.ids,data.test.unique)
+	data.hidd <- data.frame(sesId=data.hidd.idx, urlId=data.hidd.item)
+	
+	OUT$train <- data.train
+	OUT$test <- data.test.all
+	OUT$test.ids <- test.ids.ok
+	OUT$hidden <- data.hidd
+	OUT
+}
+
+# Compute the similarity matrix using adjacency list
+weightPoF.simmatrix <- function(A) {
+	i.u <- tapply(A[,1], A[,2], function(x){x})
+	items <- names(i.u)
+	nitems <- length(items)
+	
+	# correlation similarity
+	# triang.m <- lapply(1:(length(i.u)-1), function(ind, i.u) {sapply((ind+1):length(i.u), function(ind2, i.u, ind1) {((length(unique(A[,1]))*length(intersect(i.u[[ind1]], i.u[[ind2]])))-(length(i.u[[ind1]])*length(i.u[[ind2]])))/(sqrt((length(unique(A[,1]))*length(i.u[[ind1]])-(length(i.u[[ind1]])^2))*(length(unique(A[,1]))*length(i.u[[ind2]])-(length(i.u[[ind2]])^2))))}, i.u, ind)}, i.u)
+	
+	for (j in 1:(nitems-1)){
+		item1 <- NULL
+		item2 <- NULL
+		sim <- NULL
+		# cosine similarity
+		sim <- sapply((j+1):nitems, function(ind2, i.u, ind1) {(length(intersect(i.u[[ind1]], i.u[[ind2]])))/(sqrt(length(i.u[[ind1]]))*sqrt(length(i.u[[ind2]])))}, i.u, j)
+		item2 <- items[(j+1):nitems]
+		item1 <- rep(items[j], length(item2))
+    		df <- data.frame(item1, item2, sim)
+		df <- df[df[,3] > 0,]
+		write.table(df, append = TRUE, file = model.name, row.names = FALSE, col.names = FALSE, quote = FALSE, sep = "\t")
+		write.table(df[,c(2,1,3)], append = TRUE, file = model.name, row.names = FALSE, col.names = FALSE, quote = FALSE, sep = "\t")
+	}
+
+	dd <- read.csv(model.name, header = FALSE, sep = "\t")
+	idx <- as.character(unique(dd[,1]))
+	sim <- list()
+	
+	for (i in idx){
+		tmp <- dd[dd[,1]==i,c(2,3)]
+		tmp1 <- as.vector(tmp[,2])
+		names(tmp1) <- as.character(tmp[,1])
+		sim[[i]] <- tmp1
+	}
+	file.remove(model.name)
+	sim
+}
+
+# Compute the weight using the post filtering approach
+weightPoF.post.filtering.weight <- function(User, B){
+	l1 <- dataset.context[[1]]
+	l2 <- dataset.context[[2]]
+
+	context <- as.vector(l1[[as.character(User)]])
+
+	user.item.in.context <- NULL
+	for(i in context){
+		user.item.in.context <- c(user.item.in.context, l2[[as.character(i)]])
+	}
+
+	user.item.in.context <- user.item.in.context[names(user.item.in.context)!=as.character(User)]
+
+	if(length(user.item.in.context) > 0){
+		all.neighbor <- length(unique(names(user.item.in.context)))
+
+		for(i in 1:length(B)){
+			item.neighbor <- length(unique(names(user.item.in.context[user.item.in.context==names(B[i])])))
+			prob <- 1 + (item.neighbor / all.neighbor)
+			B[i] <- B[i] * prob
+		}
+	}
+	B
+}
+
+# Apply the weight to score of each candidate recommendation
+weightPoF.process.context <- function(dataset.context){
+	res <- list()
+
+	ncol.context <- ncol(dataset.context)
+
+	user <- as.vector(as.character(dataset.context[,1]))
+	item <- dataset.context[,4] # Column position of the items
+	context <- apply(dataset.context, 1, function(x){ weightPoF.vec.to.str(as.vector(x[5:ncol.context])) }) # Column position of the context
+
+	dd <- data.frame(user,item,context)
+
+	idx <- as.vector(unique(dd[,1]))
+	l1 <- list()
+	for (i in idx){
+		l1[[i]] <- as.vector(dd[dd[,1]==i,3])
+	}
+
+	ctx <- as.vector(unique(dd[,3]))
+	l2 <- list()
+	for (i in ctx){
+		tmp <- dd[dd[,3]==i,c(1,2)]
+		tmp1 <- as.vector(tmp[,2])
+		names(tmp1) <- as.vector(tmp[,1])
+		l2[[i]] <- tmp1
+	}
+	
+	res[[1]] <- l1
+	res[[2]] <- l2
+	res
+}
+
+# Convert a vector to a string separated by space
+weightPoF.vec.to.str <- function(data){
+	myStr <- ""
+	for(i in data) myStr <- paste(myStr, " ", i, sep="")
+	myStr
+}
+
+weightPoF.run.all.folders.parallel()
+# weightPoF.run.all.folders()
+
