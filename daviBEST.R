@@ -3,7 +3,7 @@
 # DaVI-BEST Algorithm using Item-Based Collaborative Filtering
 #
 # Author: Marcos A. Domingues
-# Date: April, 2013
+# Date: September, 2016
 #
 #########################################################################
 
@@ -19,7 +19,7 @@ registerDoParallel(cores=10) # Setup number of cores to be used by the cars algo
 model.name <<- 'tmp_daviBEST.txt'
 
 # DaVI-BEST algorithm for 10-fold cross validation in parallel
-davi.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
+davi.run.all.folders.parallel <- function(dataFile='dataset.csv', neigh=4){
 
 	foreach(i=1:10) %dopar% {
 		model.name <<- paste('tmp_daviBEST_', i, '.txt', sep='')
@@ -32,7 +32,7 @@ davi.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
 }
 	
 # Run the DaVI-BEST algorithm using 10-fold cross validation
-davi.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_dav_4.csv', neigh=4){
+davi.run.all.folders <- function(dataFile='dataset.csv', resultFile='result_dav_4.csv', neigh=4){
 	folders <- c(1,2,3,4,5,6,7,8,9,10)
 
 	for(i in folders){
@@ -45,7 +45,7 @@ davi.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_dav
 }
 
 # Run the DaVI-BEST algorithm for only one fold
-davi.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neigh=c(4), fold=1){
+davi.run.one.fold <- function(dataFile='dataset.csv', resultFile='result', neigh=c(4), fold=1){
 #	idneigh <- c(2,3,4)
 	idneigh <- neigh
 	for(i in idneigh){
@@ -55,7 +55,7 @@ davi.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neig
 }
 
 # The DaVI-BEST algorithm
-davi.alg <- function(dataFile='dataset2.csv', resultFile='result_4.csv', neigh=4, fold=1){
+davi.alg <- function(dataFile='dataset.csv', resultFile='result_4.csv', neigh=4, fold=1){
 	cat("...Running the experiments...\n")
 
 	res_pre <- NULL
@@ -505,6 +505,8 @@ davi.online.topNrec <- function(R,S,N,Neib) {
 	recs[sapply(1:(min(N,max)), function(dummy) {my.max <- which.max(my.x); my.x[my.max] <<- -1; my.max})] 
 }
 
+# run all folders in parallel
 davi.run.all.folders.parallel()
+# run all folders sequentially
 # davi.run.all.folders()
 

@@ -3,7 +3,7 @@
 # Weight-PoF Algorithm using Item-Based Collaborative Filtering
 #
 # Author: Marcos A. Domingues
-# Date: April, 2013
+# Date: September, 2016
 #
 #########################################################################
 
@@ -19,8 +19,8 @@ registerDoParallel(cores=10) # Setup number of cores to be used by the cars algo
 model.name <<- 'tmp_weightPoF.txt'
 
 # Weight PoF algorithm for 10-fold cross validation in parallel
-weightPoF.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
-	dataset.context <<- weightPoF.process.context( read.csv('dataset2.csv', header = TRUE, sep = " ") )
+weightPoF.run.all.folders.parallel <- function(dataFile='dataset.csv', neigh=4){
+	dataset.context <<- weightPoF.process.context( read.csv('dataset.csv', header = TRUE, sep = " ") )
 
 	foreach(i=1:10) %dopar% {
 		model.name <<- paste('tmp_weightPoF_', i, '.txt', sep='')
@@ -33,8 +33,8 @@ weightPoF.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4)
 }
 
 # Run the Weight PoF algorithm using 10-fold cross validation
-weightPoF.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_pof_4.csv', neigh=4){
-	dataset.context <<- weightPoF.process.context( read.csv('dataset2.csv', header = TRUE, sep = " ") )
+weightPoF.run.all.folders <- function(dataFile='dataset.csv', resultFile='result_pof_4.csv', neigh=4){
+	dataset.context <<- weightPoF.process.context( read.csv('dataset.csv', header = TRUE, sep = " ") )
 
 	folders <- c(1,2,3,4,5,6,7,8,9,10)
 
@@ -49,7 +49,7 @@ weightPoF.run.all.folders <- function(dataFile='dataset2.csv', resultFile='resul
 
 
 # Run the Weight PoF algorithm for only one fold
-weightPoF.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neigh=c(4), fold=1){
+weightPoF.run.one.fold <- function(dataFile='dataset.csv', resultFile='result', neigh=c(4), fold=1){
 #	idneigh <- c(2,3,4)
 	idneigh <- neigh
 	for(i in idneigh){
@@ -59,7 +59,7 @@ weightPoF.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result',
 }
 
 # The Weight PoF algorithm - intermediate call
-weightPoF.run.exp.cf <- function(dataFile='dataset2.csv', resultFile='result_4.csv', neigh=4, fold=1) {
+weightPoF.run.exp.cf <- function(dataFile='dataset.csv', resultFile='result_4.csv', neigh=4, fold=1) {
 	cat("...Running the experiments...\n")
 	
 	res_pre <- NULL
@@ -437,6 +437,8 @@ weightPoF.vec.to.str <- function(data){
 	myStr
 }
 
+# run all folders in parallel
 weightPoF.run.all.folders.parallel()
+# run all folders sequentially
 # weightPoF.run.all.folders()
 

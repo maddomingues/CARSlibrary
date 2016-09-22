@@ -1,9 +1,9 @@
-Library with Context-Aware Recommender Systems for Top-N Recommendations
+Library with Context-Aware Recommender Algorithms for Top-N Recommendations
 
 
 1) DESCRIPTION
 
-The five recommendation algorithms were implemented by using the language R. So, before running the algorithms please install the R environment. Additionally, install the doParallel package to run the experiments in parallel.
+The five recommendation algorithms were implemented by using the language R. So, before running the algorithms please install the R environment. Additionally, install the doParallel package to run the experiments in parallel. Finally, create a directory called "CARSlibrary" e put all the files inside it.
 
 Scripts:
 ibcf.R - Item-Based Collaborative Filtering (IBCF) Algorithm
@@ -11,42 +11,36 @@ cReduction.R - Combined Reduction Based Algorithm using Item-Based Collaborative
 daviBEST.R - DaVI-BEST Algorithm using Item-Based Collaborative Filtering
 filterPoF.R - Weight-PoF Algorithm using Item-Based Collaborative Filtering
 weightPoF.R - Weight-PoF Algorithm using Item-Based Collaborative Filtering
+runExperiments.R - Auxiliar program to manage the running of the algorithms
 
 
 2) HOW TO USE IT?
 
-In the R environment, you must load the R script using the command: source('algorithm.R'). The algorithm run automatically using as input a data file "dataset2.csv". The standard configuration of the algorithms will run them by using 10-fold cross validation.
+In the R environment, you must load the R script using the command: source('algorithm_name.R'). After that, the algorithm starts automatically using as input a data file "dataset.csv" in the directory "CARSlibrary". The standard configuration of the algorithms will run them by using 10-fold cross validation. However, if you want to run all the algorithms for several data files at the same time, you can setup the input and output directory in the script runExperiments.R, and load it in the R environment with the command source('runExperiments.R').
 
 
 3) INPUT DATA SET FORMAT
 
-The input data is a text file with several columns separated by the special character " " (space). In the first column we have the user id, in the second one we have the date, in the third column we have the time, the fourth one contains the urls accessed. From the fifth column we have the contextual information. Each column (from the fifth one) represents a specific context. Note that the urls are preceded by "h:" e the contexts by "d:". This tags are necessary for the correct running of the algorithms. In the directory "CARSlibrary" we have an example of input data file ("dataset2.csv").
+The input data is a text file with several columns separated by the special character " " (space). In the first and second column we have the session and user ids, the third column is used to include additional data (i.e., date, time, etc), the fourth one contains the urls accessed. In the fifth column we have the contextual information. Note that the urls are preceded by "h:" e the contexts by "d:". This tags are necessary for the correct running of the algorithms. The third column is not being used by the algorithms at the moment, but must the filled with some information (e.g., date, time, sequential number, etc). This column will be used for future extensions of this library. In the directory "CARSlibrary" we have an example of input data file ("dataset.csv").
 
-1 21859 21859 h:2 d:83
-3 317 317 h:4 d:71
-3 742 742 h:5 d:3
-4 41 41 h:7 d:70
-5 1337 1337 h:8 d:48
-5 1630 1630 h:9 d:70
-6 2825 2825 h:10 d:33
-7 3758 3758 h:15 d:3
-8 3820 3820 h:17 d:40
-8 3843 3843 h:19 d:50
-7 4928 4928 h:24 d:46
-12 10106 10106 h:29 d:47
-13 10230 10230 h:15 d:3
-12 10237 10237 h:31 d:80
-12 10237 10237 h:31 d:81
-15 12807 12807 h:36 d:79
-18 30530 30530 h:40 d:79
-18 30831 30831 h:42 d:46
-17 32059 32059 h:45 d:45
-20 34153 34153 h:46 d:43
-21 60417 60417 h:48 d:94
-22 60843 60843 h:50 d:9
+SESSIONID USERID OPTIONALDATA REQUESTEDURL CONTEXT
+21859 21859 1 h:2 d:83
+317 317 3 h:4 d:71
+742 742 3 h:5 d:3
+41 41 4 h:7 d:70
+1337 1337 5 h:8 d:48
+1630 1630 5 h:9 d:70
+2825 2825 6 h:10 d:33
+3758 3758 7 h:15 d:3
+3820 3820 8 h:17 d:40
+3843 3843 8 h:19 d:50
+4928 4928 7 h:24 d:46
+10106 10106 12 h:29 d:47
+10230 10230 13 h:15 d:3
+10237 10237 12 h:31 d:80
 
 
 4) OUTPUT FILES
 
-The R script will output the 10 results (for the 10-fold cross validation) in the directory "result" (Please, create the directory "result", if it does not exist). The algorithms compute the metrics: RECALL, PRECISION, F1, FALLOUT, and MAP.
+The R script will output the 10 results (for the 10-fold cross validation) in the directory "result" (Please, create the directory "result" inside "CARSlibrary", if it does not exist). The algorithms compute the metrics: RECALL, PRECISION, F1, FALLOUT, and MAP for all algorithms.
 

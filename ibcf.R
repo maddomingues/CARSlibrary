@@ -3,7 +3,7 @@
 # Item-Based Collaborative Filtering (IBCF) Algorithm
 #
 # Author: Marcos A. Domingues
-# Date: April, 2013
+# Date: September, 2016
 #
 #########################################################################
 
@@ -19,7 +19,7 @@ registerDoParallel(cores=10) # Setup number of cores to be used by the cars algo
 model.name <<- 'tmp_ibcf.txt'
 
 # IBCF algorithm for 10-fold cross validation in parallel
-ibcf.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
+ibcf.run.all.folders.parallel <- function(dataFile='dataset.csv', neigh=4){
 
 	foreach(i=1:10) %dopar% {
 		model.name <<- paste('tmp_ibcf_', i, '.txt', sep='')
@@ -32,7 +32,7 @@ ibcf.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
 }
 
 # Run the IBCF algorithm using 10-fold cross validation
-ibcf.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_bas_4.csv', neigh=4){
+ibcf.run.all.folders <- function(dataFile='dataset.csv', resultFile='result_bas_4.csv', neigh=4){
 	folders <- c(1,2,3,4,5,6,7,8,9,10)
 
 	for(i in folders){
@@ -45,7 +45,7 @@ ibcf.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_bas
 }
 
 # Run the IBCF algorithm for only one fold
-ibcf.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neigh=c(4), fold=1){
+ibcf.run.one.fold <- function(dataFile='dataset.csv', resultFile='result', neigh=c(4), fold=1){
 #	idneigh <- c(2,3,4)
 	idneigh <- neigh
 	for(i in idneigh){
@@ -55,7 +55,7 @@ ibcf.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neig
 }
 
 # The IBCF algorithm - intermediate call
-ibcf.run.exp.cf <- function(dataFile='dataset2.csv', resultFile='result_4.csv', neigh=4, fold=1) {
+ibcf.run.exp.cf <- function(dataFile='dataset.csv', resultFile='result_4.csv', neigh=4, fold=1) {
 	cat("...Running the experiments...\n")
 	
 	res_pre <- NULL
@@ -367,6 +367,8 @@ ibcf.simmatrix <- function(A) {
 	sim
 }
 
+# run all folders in parallel
 ibcf.run.all.folders.parallel()
+# run all folders sequentially
 # ibcf.run.all.folders()
 

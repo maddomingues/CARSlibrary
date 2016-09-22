@@ -3,7 +3,7 @@
 # Combined Reduction Based Algorithm using Item-Based Collaborative Filtering
 #
 # Author: Marcos A. Domingues
-# Date: April, 2013
+# Date: September, 2016
 #
 #########################################################################
 
@@ -20,7 +20,7 @@ model.name <<- 'tmp_cReduction.txt'
 segment.name <<- 'segments'
 
 # cReduction algorithm for 10-fold cross validation in parallel
-cReduction.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4){
+cReduction.run.all.folders.parallel <- function(dataFile='dataset.csv', neigh=4){
 
 	foreach(i=1:10) %dopar% {
 		segment.name <<- paste('segments_', i, sep='')
@@ -38,7 +38,7 @@ cReduction.run.all.folders.parallel <- function(dataFile='dataset2.csv', neigh=4
 }
 	
 # Run the cReduction algorithm using 10-fold cross validation
-cReduction.run.all.folders <- function(dataFile='dataset2.csv', resultFile='result_crb_4.csv', neigh=4){
+cReduction.run.all.folders <- function(dataFile='dataset.csv', resultFile='result_crb_4.csv', neigh=4){
 	folders <- c(1,2,3,4,5,6,7,8,9,10)
 
 	for(i in folders){
@@ -54,7 +54,7 @@ cReduction.run.all.folders <- function(dataFile='dataset2.csv', resultFile='resu
 }
 
 # Run the cReduction algorithm for only one fold
-cReduction.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result', neigh=c(4), fold=1){
+cReduction.run.one.fold <- function(dataFile='dataset.csv', resultFile='result', neigh=c(4), fold=1){
 #	idneigh <- c(2,3,4)
 	idneigh <- neigh
 	for(i in idneigh){
@@ -65,7 +65,7 @@ cReduction.run.one.fold <- function(dataFile='dataset2.csv', resultFile='result'
 }
 
 # The cReduction algorithm - intermediate call
-cReduction.run.exp.cf <- function(dataFile='dataset2.csv', resultFile='result_4.csv', neigh=4, fold=1) {
+cReduction.run.exp.cf <- function(dataFile='dataset.csv', resultFile='result_4.csv', neigh=4, fold=1) {
 	cat("...Running the experiments...\n")
 
 	res_pre <- NULL
@@ -775,6 +775,8 @@ write.segmentsC <- function(data,segC,N){
 }
 ###################################################################
 
+# run all folders in parallel
 cReduction.run.all.folders.parallel()
+# run all folders sequentially
 # cReduction.run.all.folders()
 
