@@ -3,7 +3,7 @@
 # Item-Based Collaborative Filtering (IBCF) Algorithm
 #
 # Author: Marcos A. Domingues
-# Date: September, 2016
+# Date: September, 2019
 #
 #########################################################################
 
