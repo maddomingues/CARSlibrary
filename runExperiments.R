@@ -3,7 +3,7 @@
 # Auxiliar program to run all experiments in parallel
 #
 # Author: Marcos A. Domingues
-# Date: September, 2016
+# Date: September, 2019
 #
 #########################################################################
 
