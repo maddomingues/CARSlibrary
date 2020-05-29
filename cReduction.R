@@ -3,7 +3,7 @@
 # Combined Reduction Based Algorithm using Item-Based Collaborative Filtering
 #
 # Author: Marcos A. Domingues
-# Date: September, 2016
+# Date: September, 2019
 #
 #########################################################################
 
